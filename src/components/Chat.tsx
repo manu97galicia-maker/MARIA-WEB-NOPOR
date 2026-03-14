@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import ChatMessage, { Message } from "./ChatMessage";
 import TypingIndicator from "./TypingIndicator";
 
-const CHARACTER_NAME = process.env.NEXT_PUBLIC_CHARACTER_NAME || "Luna";
+const CHARACTER_NAME = process.env.NEXT_PUBLIC_CHARACTER_NAME || "Maria";
 
 function generateId() {
   return Math.random().toString(36).slice(2, 10);

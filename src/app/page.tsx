@@ -1,7 +1,8 @@
 import Link from "next/link";
+import Image from "next/image";
 import ActiveStatus from "@/components/ActiveStatus";
 
-const CHARACTER_NAME = process.env.NEXT_PUBLIC_CHARACTER_NAME || "Luna";
+const CHARACTER_NAME = process.env.NEXT_PUBLIC_CHARACTER_NAME || "Maria";
 
 export default function LandingPage() {
   return (
@@ -9,8 +10,8 @@ export default function LandingPage() {
       {/* Navbar */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-5xl mx-auto">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white font-bold text-sm">
-            {CHARACTER_NAME[0]}
+          <div className="w-8 h-8 rounded-full overflow-hidden">
+            <Image src="/photos/maria2.png" alt={CHARACTER_NAME} width={32} height={32} className="w-full h-full object-cover" />
           </div>
           <span className="font-semibold text-gray-900">{CHARACTER_NAME}</span>
         </div>
@@ -24,8 +25,8 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="max-w-5xl mx-auto px-6 pt-16 pb-20 text-center">
-        <div className="w-28 h-28 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white text-5xl mx-auto mb-6 shadow-xl ring-4 ring-pink-200/50">
-          {CHARACTER_NAME[0]}
+        <div className="w-32 h-32 rounded-full overflow-hidden mx-auto mb-6 shadow-xl ring-4 ring-pink-200/50">
+          <Image src="/photos/maria2.png" alt={CHARACTER_NAME} width={128} height={128} className="w-full h-full object-cover" priority />
         </div>
         <ActiveStatus />
         <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4 leading-tight">
@@ -60,13 +61,28 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Photo gallery */}
+      <section className="max-w-3xl mx-auto px-6 mb-20">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="aspect-[3/4] rounded-2xl overflow-hidden shadow-lg">
+            <Image src="/photos/maria1.png" alt={`${CHARACTER_NAME} foto 1`} width={400} height={533} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+          </div>
+          <div className="aspect-[3/4] rounded-2xl overflow-hidden shadow-lg">
+            <Image src="/photos/maria2.png" alt={`${CHARACTER_NAME} foto 2`} width={400} height={533} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+          </div>
+          <div className="aspect-[3/4] rounded-2xl overflow-hidden shadow-lg">
+            <Image src="/photos/maria3.png" alt={`${CHARACTER_NAME} foto 3`} width={400} height={533} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+          </div>
+        </div>
+      </section>
+
       {/* Chat preview */}
       <section className="max-w-md mx-auto px-6 mb-20">
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
           <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
             <div className="relative">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white font-bold text-sm">
-                {CHARACTER_NAME[0]}
+              <div className="w-9 h-9 rounded-full overflow-hidden">
+                <Image src="/photos/maria2.png" alt={CHARACTER_NAME} width={36} height={36} className="w-full h-full object-cover" />
               </div>
               <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white" />
             </div>
@@ -222,6 +238,9 @@ export default function LandingPage() {
       {/* Final CTA */}
       <section className="max-w-5xl mx-auto px-6 pb-20 text-center">
         <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-3xl p-10 border border-pink-100">
+          <div className="w-16 h-16 rounded-full overflow-hidden mx-auto mb-4">
+            <Image src="/photos/maria2.png" alt={CHARACTER_NAME} width={64} height={64} className="w-full h-full object-cover" />
+          </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-3">
             Lista para hablar contigo 😘
           </h2>

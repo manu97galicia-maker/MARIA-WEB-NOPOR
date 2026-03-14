@@ -1,7 +1,7 @@
 // Maria/Luna character prompts and router system — ported from the Telegram bot
 
 export const CHARACTER_PERSONA = process.env.CHARACTER_PERSONA || "";
-export const CHARACTER_NAME = process.env.CHARACTER_NAME || "Luna";
+export const CHARACTER_NAME = process.env.CHARACTER_NAME || "Maria";
 
 // ── Multi-message instruction (injected into every AI call) ──
 

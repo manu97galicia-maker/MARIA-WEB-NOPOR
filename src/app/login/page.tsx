@@ -4,7 +4,7 @@ import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const CHARACTER_NAME = process.env.NEXT_PUBLIC_CHARACTER_NAME || "Luna";
+const CHARACTER_NAME = process.env.NEXT_PUBLIC_CHARACTER_NAME || "Maria";
 
 export default function LoginPage() {
   const router = useRouter();
