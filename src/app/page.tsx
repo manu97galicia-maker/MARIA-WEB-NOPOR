@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ActiveStatus from "@/components/ActiveStatus";
 
 const CHARACTER_NAME = process.env.NEXT_PUBLIC_CHARACTER_NAME || "Luna";
 
@@ -26,10 +27,7 @@ export default function LandingPage() {
         <div className="w-28 h-28 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white text-5xl mx-auto mb-6 shadow-xl ring-4 ring-pink-200/50">
           {CHARACTER_NAME[0]}
         </div>
-        <div className="inline-flex items-center gap-2 bg-green-50 text-green-600 text-xs font-medium px-3 py-1 rounded-full mb-4">
-          <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-          Online ahora
-        </div>
+        <ActiveStatus />
         <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4 leading-tight">
           Hola, soy {CHARACTER_NAME} 😘
         </h1>
@@ -37,6 +35,15 @@ export default function LandingPage() {
           Tu compañera exclusiva de chat. Hablamos de lo que quieras,
           cuando quieras. Respondo con mi voz real y siempre estoy disponible para ti.
         </p>
+        <div className="flex items-center justify-center gap-4 mb-4 text-xs text-gray-500">
+          <div className="flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-pink-400">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            Tiempo medio de respuesta: <span className="font-medium text-gray-700">~3 min</span>
+          </div>
+        </div>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             href="/login"
