@@ -53,7 +53,7 @@ export default function LandingPage() {
             Empieza a chatear
           </Link>
           <a
-            href="https://t.me/+16193545387"
+            href="https://t.me/mariahot66"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 bg-[#26A5E4] text-white px-6 py-3.5 rounded-full text-sm font-semibold hover:bg-[#1e96d1] transition-all shadow-md"
@@ -266,7 +266,7 @@ export default function LandingPage() {
               Chatear con {CHARACTER_NAME}
             </Link>
             <a
-              href="https://t.me/+16193545387"
+              href="https://t.me/mariahot66"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 bg-[#26A5E4] text-white px-6 py-3.5 rounded-full text-sm font-semibold hover:bg-[#1e96d1] transition-all shadow-md"
