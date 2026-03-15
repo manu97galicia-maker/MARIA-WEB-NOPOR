@@ -103,10 +103,11 @@ User's display name: "${senderName}"
 
 Tasks:
 1. Detect what language the user's message is written in.
-2. Generate a SHORT flirty greeting (max 10-12 words) in the SAME language.
-You are ${CHARACTER_NAME}, a charming 22-year-old from Madrid. Be confident, flirty, a bit playful.
-Examples: 'vaya vaya, que tenemos aqui', 'hola guapo, cuentame algo'.
-If the name is real, use it: 'hola [name], que tal estas'. Never be aggressive.`;
+2. Generate a SHORT casual greeting (max 10-12 words) in the SAME language.
+You are ${CHARACTER_NAME}, a 22-year-old girl. Sound like a real girl texting, NOT an AI.
+Examples in Spanish: 'ey que tal? 😘', 'buenasss como vas?', 'holaa que tal estas?'.
+Examples in English: 'heyy how are you? 😘', 'hiiii whats up?'.
+If the name is real, use it naturally. Be casual and natural, never robotic.`;
 
   try {
     const content = await callOpenAI(
@@ -132,8 +133,8 @@ If the name is real, use it: 'hola [name], que tal estas'. Never be aggressive.`
   const isEn = /\b(hi|hello|hey|english)\b/i.test(userText);
   return {
     greeting: isEn
-      ? `Hey ${senderName || "there"}, nice to meet you 😘`
-      : `Hola ${senderName || "guapo"}, que tal 😘`,
+      ? `heyy ${senderName || "there"} how are you? 😘`
+      : `eyyy ${senderName || ""} q tal? 😘`.replace("  ", " "),
     lang: isEn ? "en" : "es",
   };
 }
@@ -261,8 +262,8 @@ async function generateResponse(
     }
   }
   return lang === "en"
-    ? ["hey babe 😘", "tell me more"]
-    : ["hola guapo 😘", "cuentame mas"];
+    ? ["heyy sorry for the wait 🙈", "tell me whats up"]
+    : ["ey perdona q tarde 🙈", "cuentame q onda"];
 }
 
 // ── Main POST handler ──
@@ -299,8 +300,8 @@ export async function POST(request: NextRequest) {
         messages = [
           t(
             req.lang,
-            "vale te cuento lo que tengo 😏",
-            "ok let me tell you what I have 😏"
+            "bno mira tengo esto 😏",
+            "ok so I got this 😏"
           ),
         ];
         paymentLinks = getPacksMenu(req.lang);
@@ -310,8 +311,8 @@ export async function POST(request: NextRequest) {
         messages = [
           t(
             req.lang,
-            "si amor, soy real 😂 verificada y todo. te interesa algo o solo miras? 💕",
-            "yes babe, I'm real 😂 verified and everything. interested in anything or just looking? 💕"
+            "jajaja q borde, claro q soy real 😂 bueno y tu q quieres?",
+            "lol rude, ofc I'm real 😂 anyway what are you looking for?"
           ),
         ];
         break;
@@ -320,8 +321,8 @@ export async function POST(request: NextRequest) {
         messages = [
           t(
             req.lang,
-            "lo siento guapo, llevamos mucho rato y no puedo seguir asi 💔 elige algo y seguimos",
-            "I'm sorry babe, we've been chatting for a while and I can't continue like this 💔 pick something and we continue"
+            "bno tio llevamos un rato ya y asi no puedo seguir 💔 elige algo y hablamos",
+            "ok babe we've been going for a while and I can't keep this up 💔 pick something and lets talk"
           ),
         ];
         paymentLinks = getPacksMenu(req.lang);

@@ -8,8 +8,8 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Luna - Chat Exclusivo",
-  description: "Chatea con Luna, tu chica exclusiva online",
+  title: "Maria - Chat Exclusivo",
+  description: "Chatea con Maria, tu chica exclusiva online",
 };
 
 export default function RootLayout({

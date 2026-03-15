@@ -9,13 +9,24 @@ export function stylizeChatText(text: string): string {
   let out = text.replace(/¿/g, "");
 
   const rules: [RegExp, string, number][] = [
-    [/\bque\b/g, "q", 0.3],
-    [/\bcomo\b/g, "com", 0.25],
-    [/\btambién\b/g, "ta,bién", 0.18],
-    [/\bmuy\b/g, "mui", 0.12],
-    [/\bpor qué\b/g, "xq", 0.2],
-    [/\bporque\b/g, "xq", 0.18],
+    [/\bque\b/g, "q", 0.35],
+    [/\btambién\b/g, "tb", 0.30],
+    [/\btambien\b/g, "tb", 0.30],
+    [/\bmuy\b/g, "mu", 0.15],
+    [/\bpor qué\b/g, "xq", 0.25],
+    [/\bporque\b/g, "xq", 0.25],
+    [/\bbueno\b/g, "bno", 0.30],
+    [/\bpara\b/g, "pa", 0.20],
+    [/\bverdad\b/g, "verdá", 0.15],
+    [/\bbuenas\b/g, "bnas", 0.20],
+    [/\ba ver\b/g, "aver", 0.35],
+    [/\bguapo\b/g, "wpo", 0.15],
   ];
+
+  // Randomly lowercase first letter (real texting)
+  if (Math.random() < 0.3 && out.length > 1 && out[0] === out[0].toUpperCase()) {
+    out = out[0].toLowerCase() + out.slice(1);
+  }
 
   for (const [pattern, replacement, prob] of rules) {
     if (Math.random() < prob) {

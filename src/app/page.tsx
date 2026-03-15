@@ -33,8 +33,8 @@ export default function LandingPage() {
           Hola, soy {CHARACTER_NAME} 😘
         </h1>
         <p className="text-lg text-gray-600 max-w-lg mx-auto mb-8 leading-relaxed">
-          Tu compañera exclusiva de chat. Hablamos de lo que quieras,
-          cuando quieras. Respondo con mi voz real y siempre estoy disponible para ti.
+          Hablamos de lo que quieras, cuando quieras. Te contesto con mi voz
+          y estoy siempre disponible. Sin rollos, sin filtros.
         </p>
         <div className="flex items-center justify-center gap-4 mb-4 text-xs text-gray-500">
           <div className="flex items-center gap-1.5">
@@ -99,7 +99,7 @@ export default function LandingPage() {
             </div>
             <div className="flex justify-start">
               <div className="bg-white border border-gray-100 shadow-sm rounded-2xl rounded-bl-md px-4 py-2 text-sm text-gray-800 max-w-[75%]">
-                Hola guapo! que tal andas? 😏
+                eyyy q tal? como vas? 😏
               </div>
             </div>
             <div className="flex justify-start">
@@ -126,7 +126,7 @@ export default function LandingPage() {
             </div>
             <div className="flex justify-start">
               <div className="bg-white border border-gray-100 shadow-sm rounded-2xl rounded-bl-md px-4 py-2 text-sm text-gray-800 max-w-[75%]">
-                jaja gracias guapo, me pones roja 😘
+                jajaja bua q mono, me vas a poner roja 🙈
               </div>
             </div>
           </div>
@@ -244,8 +244,8 @@ export default function LandingPage() {
           <h2 className="text-2xl font-bold text-gray-900 mb-3">
             Lista para hablar contigo 😘
           </h2>
-          <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
-            Entra ahora y empieza a chatear conmigo. Te estoy esperando.
+        <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
+            Entra y hablamos. Te espero dentro.
           </p>
           <Link
             href="/login"
