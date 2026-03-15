@@ -5,6 +5,7 @@ import ChatMessage, { Message } from "./ChatMessage";
 import TypingIndicator from "./TypingIndicator";
 
 const CHARACTER_NAME = process.env.NEXT_PUBLIC_CHARACTER_NAME || "Maria";
+const TELEGRAM_LINK = "https://t.me/mariahot66";
 
 function generateId() {
   return Math.random().toString(36).slice(2, 10);
@@ -18,14 +19,7 @@ export default function Chat({ userName }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [sessionId] = useState(() => generateId());
   const [lang, setLang] = useState("es");
-  const [messageCount, setMessageCount] = useState(0);
-  const [paymentNudgeCount, setPaymentNudgeCount] = useState(0);
-  const [paymentVerified] = useState(false);
-  const [isEroticMode] = useState(false);
-  const [isBlocked, setIsBlocked] = useState(false);
-  const [voiceCount, setVoiceCount] = useState(0);
   const [chatStarted, setChatStarted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -41,63 +35,52 @@ export default function Chat({ userName }: ChatProps) {
   const addAssistantMessages = useCallback(
     async (
       textMessages: string[],
-      sendVoice: boolean,
-      typingSeconds: number,
-      paymentLinks: string | null
+      telegramLink: string | null,
+      prices: string | null,
+      showPrices: boolean
     ) => {
       for (let i = 0; i < textMessages.length; i++) {
-        // Show typing indicator
         setIsTyping(true);
-        const delay = i === 0 ? typingSeconds * 1000 : (1 + Math.random() * 2) * 1000;
-        await new Promise((r) => setTimeout(r, Math.min(delay, 5000)));
+        const delay = i === 0 ? 2000 : 1500;
+        await new Promise((r) => setTimeout(r, delay));
         setIsTyping(false);
-
-        let audioUrl: string | undefined;
-
-        // Generate voice for the first message if requested
-        if (sendVoice && i === 0 && voiceCount < 4) {
-          try {
-            const voiceResp = await fetch("/api/voice", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ text: textMessages[i], lang }),
-            });
-            if (voiceResp.ok) {
-              const audioBlob = await voiceResp.blob();
-              audioUrl = URL.createObjectURL(audioBlob);
-              setVoiceCount((c) => c + 1);
-            }
-          } catch (e) {
-            console.error("Voice error:", e);
-          }
-        }
 
         const msg: Message = {
           id: generateId(),
           role: "assistant",
           content: textMessages[i],
-          audioUrl,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, msg]);
-        setMessageCount((c) => c + 1);
       }
 
-      // Payment links as separate message
-      if (paymentLinks) {
+      // Show prices if available
+      if (showPrices && prices) {
         setIsTyping(true);
         await new Promise((r) => setTimeout(r, 1500));
         setIsTyping(false);
-        const linkMsg: Message = {
+        const priceMsg: Message = {
           id: generateId(),
           role: "assistant",
-          content: paymentLinks,
+          content: prices,
           timestamp: new Date(),
         };
-        setMessages((prev) => [...prev, linkMsg]);
+        setMessages((prev) => [...prev, priceMsg]);
+      }
+
+      // Always show Telegram button after response
+      if (telegramLink) {
+        await new Promise((r) => setTimeout(r, 1000));
+        const tgMsg: Message = {
+          id: generateId(),
+          role: "assistant",
+          content: `__TELEGRAM_BUTTON__`,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, tgMsg]);
       }
     },
-    [lang, voiceCount]
+    []
   );
 
   const sendMessage = async () => {
@@ -107,7 +90,6 @@ export default function Chat({ userName }: ChatProps) {
     const isFirst = !chatStarted;
     setChatStarted(true);
 
-    // Add user message
     const userMsg: Message = {
       id: generateId(),
       role: "user",
@@ -117,12 +99,6 @@ export default function Chat({ userName }: ChatProps) {
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
 
-    // Build history for API
-    const history = [...messages, userMsg].map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
-
     try {
       setIsTyping(true);
       const resp = await fetch("/api/chat", {
@@ -130,15 +106,7 @@ export default function Chat({ userName }: ChatProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: text,
-          sessionId,
-          history,
           lang,
-          messageCount,
-          paymentVerified,
-          isEroticMode,
-          isBlocked,
-          paymentNudgeCount,
-          voiceCount,
           isFirstMessage: isFirst,
           senderName: userName || "",
         }),
@@ -149,16 +117,13 @@ export default function Chat({ userName }: ChatProps) {
       const data = await resp.json();
       setIsTyping(false);
 
-      // Update lang if greeting detected it
       if (data.lang) setLang(data.lang);
-      if (data.incrementNudge) setPaymentNudgeCount((c) => c + 1);
-      if (data.action === "block_freeloader") setIsBlocked(true);
 
       await addAssistantMessages(
         data.messages,
-        data.sendVoice,
-        data.typingSeconds || 3,
-        data.paymentLinks
+        data.telegramLink,
+        data.prices || null,
+        data.showPrices || false
       );
     } catch (error) {
       console.error("Send error:", error);
@@ -178,6 +143,29 @@ export default function Chat({ userName }: ChatProps) {
       e.preventDefault();
       sendMessage();
     }
+  };
+
+  const renderMessage = (msg: Message) => {
+    // Telegram button special message
+    if (msg.content === "__TELEGRAM_BUTTON__") {
+      return (
+        <div key={msg.id} className="flex justify-start mb-3">
+          <a
+            href={TELEGRAM_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2.5 bg-[#26A5E4] text-white px-5 py-3 rounded-2xl rounded-bl-md text-sm font-semibold hover:bg-[#1e96d1] transition-all shadow-md"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+            </svg>
+            {lang === "en" ? `Chat with ${CHARACTER_NAME} on Telegram` : `Hablar con ${CHARACTER_NAME} en Telegram`}
+          </a>
+        </div>
+      );
+    }
+
+    return <ChatMessage key={msg.id} message={msg} />;
   };
 
   return (
@@ -201,6 +189,17 @@ export default function Chat({ userName }: ChatProps) {
           </p>
         </div>
         <div className="ml-auto flex gap-2">
+          <a
+            href={TELEGRAM_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs bg-[#26A5E4] text-white px-3 py-1.5 rounded-full font-medium hover:bg-[#1e96d1] transition-colors"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+            </svg>
+            Telegram
+          </a>
           <button
             onClick={() => setLang(lang === "es" ? "en" : "es")}
             className="text-xs bg-gray-100 px-2.5 py-1 rounded-full text-gray-600 hover:bg-gray-200 transition-colors"
@@ -220,26 +219,37 @@ export default function Chat({ userName }: ChatProps) {
             <h3 className="text-lg font-semibold text-gray-800 mb-1">
               {CHARACTER_NAME}
             </h3>
-            <p className="text-sm text-gray-500 mb-6 max-w-xs">
+            <p className="text-sm text-gray-500 mb-4 max-w-xs">
               {lang === "en"
-                ? `Say hi to ${CHARACTER_NAME}! She's online and waiting for you 😘`
-                : `Saluda a ${CHARACTER_NAME}! Esta online esperandote 😘`}
+                ? `Ask me about prices or chat with me on Telegram 😘`
+                : `Preguntame por precios o hablame por Telegram 😘`}
             </p>
-            <button
-              onClick={() => {
-                setInput(lang === "en" ? "Hey!" : "Hola!");
-                inputRef.current?.focus();
-              }}
-              className="bg-gradient-to-r from-pink-500 to-rose-500 text-white px-6 py-2.5 rounded-full text-sm font-medium hover:from-pink-600 hover:to-rose-600 transition-all shadow-md hover:shadow-lg"
-            >
-              {lang === "en" ? "Say Hello 👋" : "Decir Hola 👋"}
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  setInput(lang === "en" ? "What are your prices?" : "Cuanto cuestas?");
+                  inputRef.current?.focus();
+                }}
+                className="bg-gradient-to-r from-pink-500 to-rose-500 text-white px-6 py-2.5 rounded-full text-sm font-medium hover:from-pink-600 hover:to-rose-600 transition-all shadow-md"
+              >
+                {lang === "en" ? "See prices 💰" : "Ver precios 💰"}
+              </button>
+              <a
+                href={TELEGRAM_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 bg-[#26A5E4] text-white px-6 py-2.5 rounded-full text-sm font-medium hover:bg-[#1e96d1] transition-all shadow-md"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                </svg>
+                {lang === "en" ? "Chat on Telegram" : "Hablar por Telegram"}
+              </a>
+            </div>
           </div>
         )}
 
-        {messages.map((msg) => (
-          <ChatMessage key={msg.id} message={msg} />
-        ))}
+        {messages.map((msg) => renderMessage(msg))}
 
         {isTyping && <TypingIndicator />}
         <div ref={messagesEndRef} />
@@ -255,13 +265,9 @@ export default function Chat({ userName }: ChatProps) {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={
-              isBlocked
-                ? lang === "en"
-                  ? "Choose a plan to continue..."
-                  : "Elige un plan para seguir..."
-                : lang === "en"
-                ? "Type a message..."
-                : "Escribe un mensaje..."
+              lang === "en"
+                ? "Ask about prices..."
+                : "Pregunta por precios..."
             }
             disabled={isTyping}
             className="flex-1 bg-gray-100 rounded-full px-5 py-2.5 text-sm text-gray-800 placeholder-gray-400 outline-none focus:ring-2 focus:ring-pink-300 focus:bg-white transition-all disabled:opacity-50"

@@ -1,370 +1,75 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  CHARACTER_PERSONA,
-  MULTI_MSG_INSTRUCTION_ES,
-  MULTI_MSG_INSTRUCTION_EN,
-  ROUTER_SYSTEM_PROMPT,
-  ROUTER_SCHEMA,
-  GREETING_SCHEMA,
-  STYLE_INSTRUCTIONS,
   CHARACTER_NAME,
 } from "@/lib/prompts";
-import { normalizeOutgoingText, t } from "@/lib/textUtils";
-import { getPacksMenu, STRIPE_LINKS } from "@/lib/payments";
+import { getPacksMenu } from "@/lib/payments";
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
-const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
-const FALLBACK_MODELS = ["gpt-4.1-mini", "gpt-4o-mini"];
+const TELEGRAM_LINK = "https://t.me/mariahot66";
 
-// ── Types ──
-
-interface RouterDecision {
-  action: string;
-  pack_choice: string | null;
-  delay_seconds: number;
-  typing_seconds: number;
-  response_style: string;
-  send_voice: boolean;
-  include_payment_links: boolean;
-  engagement_level: string;
-  reasoning: string;
+// Simple keyword detection — no LLM needed for this funnel
+function detectLang(text: string): string {
+  return /\b(hi|hello|hey|english|what|how|price|cost)\b/i.test(text) ? "en" : "es";
 }
 
-interface ChatRequest {
-  message: string;
-  sessionId: string;
-  history: { role: string; content: string }[];
-  lang: string;
-  messageCount: number;
-  paymentVerified: boolean;
-  isEroticMode: boolean;
-  isBlocked: boolean;
-  paymentNudgeCount: number;
-  voiceCount: number;
-  isFirstMessage: boolean;
-  senderName: string;
+function isPriceQuestion(text: string): boolean {
+  return /\b(precio|precios|cuanto|cuesta|pack|packs|foto|fotos|video|chat|servicio|servicios|planes|plan|comprar|pagar|price|prices|cost|how much|buy|pay|plans|photos|content)\b/i.test(text);
 }
 
-// ── OpenAI call helper ──
-
-async function callOpenAI(
-  messages: { role: string; content: string }[],
-  model: string,
-  options: {
-    temperature?: number;
-    maxTokens?: number;
-    responseFormat?: unknown;
-  } = {}
-): Promise<string | null> {
-  if (!OPENAI_API_KEY) return null;
-
-  const body: Record<string, unknown> = {
-    model,
-    messages,
-    temperature: options.temperature ?? 0.95,
-    max_tokens: options.maxTokens ?? 250,
-    top_p: 0.95,
-    frequency_penalty: 0.7,
-    presence_penalty: 0.6,
-  };
-  if (options.responseFormat) {
-    body.response_format = options.responseFormat;
-  }
-
-  try {
-    const resp = await fetch(OPENAI_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-    if (resp.ok) {
-      const data = await resp.json();
-      return data.choices?.[0]?.message?.content?.trim() || null;
-    }
-    console.error("OpenAI error:", resp.status, await resp.text().catch(() => ""));
-  } catch (e) {
-    console.error("OpenAI exception:", e);
-  }
-  return null;
+function t(lang: string, es: string, en: string): string {
+  return lang === "en" ? en : es;
 }
-
-// ── First greeting ──
-
-async function generateFirstGreeting(
-  userText: string,
-  senderName: string
-): Promise<{ greeting: string; lang: string }> {
-  const prompt = `User's first message: "${userText}"
-User's display name: "${senderName}"
-
-Tasks:
-1. Detect what language the user's message is written in.
-2. Generate a SHORT casual greeting (max 10-12 words) in the SAME language.
-You are ${CHARACTER_NAME}, a 22-year-old girl. Sound like a real girl texting, NOT an AI.
-Examples in Spanish: 'ey que tal? 😘', 'buenasss como vas?', 'holaa que tal estas?'.
-Examples in English: 'heyy how are you? 😘', 'hiiii whats up?'.
-If the name is real, use it naturally. Be casual and natural, never robotic.`;
-
-  try {
-    const content = await callOpenAI(
-      [
-        { role: "system", content: "Follow instructions exactly." },
-        { role: "user", content: prompt },
-      ],
-      "gpt-4.1-mini",
-      { temperature: 0.9, maxTokens: 120, responseFormat: GREETING_SCHEMA }
-    );
-    if (content) {
-      const parsed = JSON.parse(content);
-      return {
-        greeting: parsed.greeting?.trim() || `hola ${senderName} 😘`,
-        lang: (parsed.lang || "es").toLowerCase().slice(0, 2),
-      };
-    }
-  } catch (e) {
-    console.error("Greeting error:", e);
-  }
-
-  // Fallback
-  const isEn = /\b(hi|hello|hey|english)\b/i.test(userText);
-  return {
-    greeting: isEn
-      ? `heyy ${senderName || "there"} how are you? 😘`
-      : `eyyy ${senderName || ""} q tal? 😘`.replace("  ", " "),
-    lang: isEn ? "en" : "es",
-  };
-}
-
-// ── Router: classify user intent ──
-
-async function classifyMessage(
-  req: ChatRequest
-): Promise<RouterDecision> {
-  const recent = req.history
-    .slice(-6)
-    .map((m) => `${m.role === "assistant" ? CHARACTER_NAME : "User"}: ${m.content.slice(0, 120)}`)
-    .join("\n  ");
-
-  const userPrompt = `Classify this message and decide the action.
-
-## Current State:
-- Language: ${req.lang}
-- Messages sent: ${req.messageCount}
-- Payment verified: ${req.paymentVerified}
-- Erotic mode: ${req.isEroticMode}
-- Chat blocked: ${req.isBlocked}
-- Voice notes sent: ${req.voiceCount} / 4 max
-- Payment nudge count: ${req.paymentNudgeCount}
-
-## Recent conversation:
-  ${recent}
-
-## New user message:
-"${req.message}"
-
-Return the routing decision as JSON.`;
-
-  try {
-    const content = await callOpenAI(
-      [
-        { role: "system", content: ROUTER_SYSTEM_PROMPT },
-        { role: "user", content: userPrompt },
-      ],
-      "gpt-4.1-mini",
-      { temperature: 0.3, maxTokens: 300, responseFormat: ROUTER_SCHEMA }
-    );
-    if (content) {
-      const parsed = JSON.parse(content);
-      // Enforce limits
-      if (parsed.pack_choice && !["basico", "vip"].includes(parsed.pack_choice)) {
-        parsed.pack_choice = null;
-      }
-      if (req.paymentVerified || req.isEroticMode) {
-        parsed.include_payment_links = false;
-        if (["soft_reminder", "block_freeloader", "reply_vague"].includes(parsed.action)) {
-          parsed.action = "reply_normal";
-          parsed.response_style = "flirty";
-          parsed.engagement_level = "high";
-        }
-      }
-      if (req.paymentNudgeCount >= 12 && !req.paymentVerified && !req.isEroticMode) {
-        parsed.action = "block_freeloader";
-      }
-      if (req.voiceCount >= 4) {
-        parsed.send_voice = false;
-      }
-      return parsed as RouterDecision;
-    }
-  } catch (e) {
-    console.error("Router error:", e);
-  }
-
-  // Fallback
-  return {
-    action: "reply_normal",
-    pack_choice: null,
-    delay_seconds: 3,
-    typing_seconds: 5,
-    response_style: "warm",
-    send_voice: false,
-    include_payment_links: false,
-    engagement_level: "medium",
-    reasoning: "fallback",
-  };
-}
-
-// ── Generate AI response ──
-
-async function generateResponse(
-  history: { role: string; content: string }[],
-  userMessage: string,
-  lang: string,
-  responseStyle: string,
-  paymentNudgeCount: number,
-  isEroticMode: boolean
-): Promise<string[]> {
-  const multiMsg =
-    lang === "en" ? MULTI_MSG_INSTRUCTION_EN : MULTI_MSG_INSTRUCTION_ES;
-  let persona = CHARACTER_PERSONA + multiMsg;
-
-  const styleNote = STYLE_INSTRUCTIONS[responseStyle] || "";
-  if (styleNote) persona += `\n\nSTYLE NOTE: ${styleNote}`;
-
-  if (paymentNudgeCount >= 5 && paymentNudgeCount < 23 && !isEroticMode) {
-    persona += t(
-      lang,
-      " El cliente lleva varios mensajes. Responde breve y si viene a cuento recuerda tus servicios.",
-      " The client has been chatting a while. Reply briefly and if relevant mention your services."
-    );
-  }
-
-  const apiMessages = [
-    { role: "system", content: persona },
-    ...history.slice(-30),
-    { role: "user", content: userMessage },
-  ];
-
-  const models = [OPENAI_MODEL, ...FALLBACK_MODELS.filter((m) => m !== OPENAI_MODEL)];
-  for (const model of models) {
-    const content = await callOpenAI(apiMessages, model);
-    if (content) {
-      const parts = content
-        .split("[MSG]")
-        .map((p: string) => p.trim())
-        .filter(Boolean);
-      return parts.length
-        ? parts.flatMap((p: string) => normalizeOutgoingText(p))
-        : normalizeOutgoingText(content);
-    }
-  }
-  return lang === "en"
-    ? ["heyy sorry for the wait 🙈", "tell me whats up"]
-    : ["ey perdona q tarde 🙈", "cuentame q onda"];
-}
-
-// ── Main POST handler ──
 
 export async function POST(request: NextRequest) {
   try {
-    const req: ChatRequest = await request.json();
+    const { message, lang: clientLang, isFirstMessage } = await request.json();
+    const lang = clientLang || detectLang(message);
 
-    // First message: generate greeting
-    if (req.isFirstMessage) {
-      const { greeting, lang } = await generateFirstGreeting(
-        req.message,
-        req.senderName
-      );
+    // First message: greeting + redirect to Telegram
+    if (isFirstMessage) {
       return NextResponse.json({
-        messages: [greeting],
+        messages: [
+          t(lang,
+            `eyyy q tal? 😘 soy ${CHARACTER_NAME}`,
+            `heyy how are you? 😘 I'm ${CHARACTER_NAME}`
+          ),
+          t(lang,
+            `pa hablar conmigo de verdad escribeme por Telegram, ahi te contesto con mi voz y todo 💋`,
+            `to really talk to me text me on Telegram, I reply with my real voice and everything 💋`
+          ),
+        ],
         lang,
-        action: "greeting",
-        sendVoice: true, // always voice on first message
-        typingSeconds: 3,
-        paymentLinks: null,
+        telegramLink: TELEGRAM_LINK,
+        showPrices: false,
       });
     }
 
-    // Classify intent with router
-    const decision = await classifyMessage(req);
-
-    let messages: string[] = [];
-    let paymentLinks: string | null = null;
-
-    switch (decision.action) {
-      case "send_prices":
-      case "send_payment_links":
-        messages = [
-          t(
-            req.lang,
-            "bno mira tengo esto 😏",
-            "ok so I got this 😏"
+    // Price questions: show prices + Telegram
+    if (isPriceQuestion(message)) {
+      return NextResponse.json({
+        messages: [
+          t(lang,
+            "bno mira esto es lo q tengo 😏",
+            "ok so this is what I got 😏"
           ),
-        ];
-        paymentLinks = getPacksMenu(req.lang);
-        break;
-
-      case "handle_verification":
-        messages = [
-          t(
-            req.lang,
-            "jajaja q borde, claro q soy real 😂 bueno y tu q quieres?",
-            "lol rude, ofc I'm real 😂 anyway what are you looking for?"
-          ),
-        ];
-        break;
-
-      case "block_freeloader":
-        messages = [
-          t(
-            req.lang,
-            "bno tio llevamos un rato ya y asi no puedo seguir 💔 elige algo y hablamos",
-            "ok babe we've been going for a while and I can't keep this up 💔 pick something and lets talk"
-          ),
-        ];
-        paymentLinks = getPacksMenu(req.lang);
-        break;
-
-      case "soft_reminder":
-      case "reply_normal":
-      case "reply_vague":
-      default:
-        messages = await generateResponse(
-          req.history,
-          req.message,
-          req.lang,
-          decision.response_style,
-          req.paymentNudgeCount,
-          req.isEroticMode
-        );
-        if (decision.include_payment_links) {
-          paymentLinks = getPacksMenu(req.lang);
-        }
-        break;
+        ],
+        lang,
+        prices: getPacksMenu(lang),
+        telegramLink: TELEGRAM_LINK,
+        showPrices: true,
+      });
     }
 
-    // Increment nudge for non-paying users on normal replies
-    let incrementNudge = false;
-    if (
-      !req.paymentVerified &&
-      !req.isEroticMode &&
-      ["reply_normal", "reply_vague", "soft_reminder"].includes(decision.action)
-    ) {
-      incrementNudge = true;
-    }
-
+    // Everything else: redirect to Telegram
     return NextResponse.json({
-      messages,
-      action: decision.action,
-      sendVoice: decision.send_voice,
-      typingSeconds: decision.typing_seconds,
-      responseStyle: decision.response_style,
-      engagementLevel: decision.engagement_level,
-      paymentLinks,
-      incrementNudge,
+      messages: [
+        t(lang,
+          `jaja escribeme por Telegram q ahi hablamos mejor 😘`,
+          `haha text me on Telegram we can talk better there 😘`
+        ),
+      ],
+      lang,
+      telegramLink: TELEGRAM_LINK,
+      showPrices: false,
     });
   } catch (error) {
     console.error("Chat API error:", error);
